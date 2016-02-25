@@ -1,0 +1,32 @@
+{
+  "name": "noble-scaffold.js",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bZichett/noble-scaffold.js.git"
+  },
+  "author": "nobalai",
+  "type": "MIT",
+  "bugs": {
+    "url": "https://github.com/bZichett/noble-scaffold.js/issues"
+  },
+  "homepage": "https://github.com/bZichett/noble-scaffold.js#readme",
+  "devDependencies": {
+    "babel-core": "^6.5.2",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-preset-es2015": "^6.5.0",
+    "babel-preset-react": "^6.5.0",
+    "chai": "^3.5.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-concat": "^2.6.0",
+    "gulp-exec": "^2.1.2",
+    "gulp-ruby-sass": "^2.0.6",
+    "mocha": "^2.4.5"
+  }
+}
