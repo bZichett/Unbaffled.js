@@ -1,0 +1,1 @@
+var lib1 = require('./lib1.js');

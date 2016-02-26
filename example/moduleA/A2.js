@@ -1,3 +1,1 @@
-/**
- * Created by nobalai on 2/25/16.
- */
+module.exports = 'A2'
