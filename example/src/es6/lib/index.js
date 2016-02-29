@@ -1,1 +1,1 @@
-var lib1 = require('./lib1.js');
+import lib1 from './lib1.js'

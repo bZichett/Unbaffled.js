@@ -33,6 +33,7 @@
     "gulp-webpack": "^1.5.0",
     "project-name-generator": "^2.1.2",
     "should": "^8.2.2",
+    "split-by-name-webpack-plugin": "0.0.3",
     "webpack": "^2.0.7-beta",
     "webpack-dev-server": "^2.0.0-beta",
     "webpack-merge": "^0.7.3",
@@ -40,7 +41,5 @@
     "webpack-stream": "^3.1.0",
     "yargs": "^4.2.0"
   },
-  "devDependencies": {
-
-  }
+  "devDependencies": {}
 }

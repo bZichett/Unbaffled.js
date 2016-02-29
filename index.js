@@ -1,3 +1,5 @@
+/* global require */
+
 /** NODE */
 var path = require('path');
 
@@ -7,46 +9,66 @@ var concat = require('gulp-concat');
 var babel = require('gulp-babel');
 var sass = require("gulp-ruby-sass");
 var mocha = require("gulp-mocha")
+var merge = require("webpack-merge")
 
 /** SCAFFOLD */
-var setupRelease = require("./src/setup").setupRelease
 
-module.exports = function(options) {
+var gulpfile = require('./src/gulpfile')
 
-    options = options || {};
+var tasks = [
+	//require('./src/gulpfile'),
+	require('./src/tasks/webpack'),
+	require('./src/tasks/scss'),
+	require('./src/tasks/test'),
+	require('./src/tasks/es6')
+]
 
-    options.entryPoints = options.entryPoints || false
-    if(!options.entryPoints) throw Error('Need to specify at least one entry point');
+module.exports = function (options) {
 
-    if(!options.modules) throw Error('Need to specify at least one module');
+	options = options || {};
 
-    options.versionsDir = options.versionsDir || '/dist';
+	options.entryPoints = options.entryPoints || false
+	if (!options.entryPoints) throw Error('Need to specify at least one entry point');
 
-    var es6Modules = options.modules.language.es6
+	if (!options.modules) throw Error('Need to specify at least one module');
 
-    options.modules.list = {
-        es6 : Object.keys(es6Modules)
-    }
+	options.versionsDir = options.versionsDir || '/dist';
 
-    var dir = options.dir
+	var dir = options.dir
+	var es6Modules = options.modules.language.es6
 
-    dir.dist = path.resolve(dir.dist)
+	var es6_list = Object.keys(es6Modules)
 
-    var globs = {
-        tests: ['test/*-test.js'].concat(
-            Object.keys(es6Modules).map(function(moduleName){return es6Modules[moduleName][0]}))
+	options = merge(options, {
+		modules: {
+			list: {
+				es6: es6_list
+			}
+		},
+		dir: {
+			modules: {
+				list: es6_list.map(function (name) {
+					return path.resolve(dir.languages.es6, name)
+				})
+			},
+			dist: path.join(dir.root, dir.dist),
+			release: path.join(dir.root, dir.dist, dir.release),
+			development: path.join(dir.root, dir.dist, dir.development)
+		}
+	})
 
-    }
+	console.log("Options", options)
 
-    gulp.task('default', function(){
-        setupRelease(options)
-    })
+	var globs = {
+		tests: ['test/*-test.js'].concat(
+			Object.keys(es6Modules).map(function (moduleName) {
+				return es6Modules[moduleName][0]
+			}))
+	}
 
+	for (var i = 0; i < tasks.length; i++) {
+		tasks[i](options)
+	}
 
-    gulp.task('test', function(){
-        return gulp.src(globs.tests , {read: false})
-            .pipe(mocha({require: 'should', reporter: 'spec'}));
-    })
-
-    return options
+	return options
 };

@@ -1,2 +1,3 @@
-var C1 = require('../moduleC/C1')
-module.exports = 'A1'
+import C1 from '../moduleC/C1'
+
+export default 'A1'

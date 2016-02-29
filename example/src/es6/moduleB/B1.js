@@ -1,1 +1,1 @@
-module.exports = 'B1'
+export default 'B1'

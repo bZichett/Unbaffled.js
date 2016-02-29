@@ -21,7 +21,7 @@ module.exports = {
 
         var distributionName = generate().dashed
 
-        dir.release = path.resolve(dir.dist, distributionName)
+        dir.release = path.join(dir.release, distributionName)
 
         // Create /build and version manifest if they don't exist
         if (!fs.existsSync(dir.dist)) fs.mkdirSync(dir.dist);

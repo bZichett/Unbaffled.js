@@ -1,1 +1,1 @@
-module.exports = "frameworkX"
+export default "frameworkX"

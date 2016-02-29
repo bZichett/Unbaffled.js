@@ -20,16 +20,20 @@ var example_dir = path.resolve(ROOT_DIR, 'example')
 /** Environment variables */
 var nodeEnv = process.env.NODE_ENV || 'development';
 
-
 console.log("Webpack Production Mode")
 
-module.exports.webpackConfig = config({
-    output: {
-        path: path.join(ROOT_DIR, "build"),
-        publicPath: path.join(ROOT_DIR, "assets"),
-        filename: "[name].js",
-        //filename: "[name]-[chunkhash].js",
-        chunkFilename: "[name].js",
-        //chunkFilename: "[name]-[chunkhash].js"
-    }
-})
+module.exports = function(options){
+
+    var webpackConfig = config({
+        output: {
+            path: path.join(ROOT_DIR, "build"),
+            publicPath: path.join(ROOT_DIR, "assets"),
+            filename: "[name].js",
+            //filename: "[name]-[chunkhash].js",
+            chunkFilename: "[name].js",
+            //chunkFilename: "[name]-[chunkhash].js"
+        },
+    })
+    return webpackConfig
+
+}
