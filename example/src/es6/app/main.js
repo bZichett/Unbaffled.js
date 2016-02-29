@@ -7,4 +7,5 @@ var lib1 = require('../lib/lib1')
 var frameworkX = require('../vendor/frameworkX')
 var pluginY = require('../vendor/pluginY')
 
-console.log(lib)
+console.log(frameworkX)
+console.log(pluginY)

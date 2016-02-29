@@ -5,9 +5,6 @@ var getNextVersion = utils.getNextVersion
 var printDate = utils.printDate
 var findByMatchingProperties = utils.findByMatchingProperties
 
-var compareModuleRelease = setup.compareModuleRelease
-var buildDistribution = setup.buildDistribution
-
 
 //gulp.task("release", [].concat("setupRelease", js_tasks, scss_tasks), function(){
 //})

@@ -1,12 +1,9 @@
-var distributionName
-
-var options = require('../index')
-
 var fs = require('fs')
+var path = require('path')
 
 var argv = require('yargs').argv;
 var generate = require('project-name-generator')
-var exec = require('./gulp-exec')
+var exec = require('gulp-exec')
 
 var utils = require('./utils')
 var printDate = utils.printDate
@@ -14,10 +11,24 @@ var findByMatchingProperties = utils.findByMatchingProperties
 var getNextVersion = utils.getNextVersion
 
 module.exports = {
-    setupRelease: function () {
-        distributionName = generate().dashed
+    setupRelease: function (opts) {
 
-        var versions = JSON.parse(fs.readFileSync(dir.dist + 'manifest.json', 'utf8'))
+        console.log(opts.dir.dist)
+
+        var dir = opts.dir
+        var modules = opts.modules
+        var manifestFile = path.resolve(dir.versionManifest.location, dir.versionManifest.name + '.json')
+
+        var distributionName = generate().dashed
+
+        dir.release = path.resolve(dir.dist, distributionName)
+
+        // Create /build and version manifest if they don't exist
+        if (!fs.existsSync(dir.dist)) fs.mkdirSync(dir.dist);
+        if (!fs.existsSync(manifestFile)) fs.writeFileSync(manifestFile, JSON.stringify([]))
+
+        var versions = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
+
         var versionNames = versions.map(function (version) {
             return version.name
         })
@@ -45,7 +56,16 @@ module.exports = {
         }
 
         // If an old version exists
-        if (versions.length > 0) {
+
+        var developmentExists = false
+        try {
+            var stats = fs.lstatSync( path.resolve(dir.dist, 'development'))
+            if (stats.isDirectory()) {
+                developmentExists = true
+            }
+        } catch (e) {}
+
+        if (versions.length > 0 && developmentExists) {
             console.log("Old versions exist")
 
             // We need to compare the modified date of the last distribution module
@@ -58,17 +78,17 @@ module.exports = {
 
             var moduleModifiedMapJS = {}
 
-            dir.modules.forEach(function (module) {
-                var stats = fs.statSync(dir.dist + 'development/' + 'js' + '/' + module + '.js')
+            opts.modules.language.es6.forEach(function (module) {
+                var stats = fs.statSync()
                 moduleModifiedMapJS[module] = stats.mtime
             })
 
             var moduleModifiedMapCSS = {}
 
-            Object.keys(dir.scssGlobs).forEach(function (module) {
-                var stats = fs.statSync(dir.dist + 'development/' + 'css' + '/' + module + '.css')
-                moduleModifiedMapCSS[module] = stats.mtime
-            })
+            // TODO Object.keys(dir.scssGlobs).forEach(function (module) {
+            //    var stats = fs.statSync(dir.dist + 'development/' + 'css' + '/' + module + '.css')
+            //    moduleModifiedMapCSS[module] = stats.mtime
+            //})
 
             var moduleModifiedMapVendor = {}
             var vendorModules = ['vendor']
@@ -78,9 +98,76 @@ module.exports = {
 
             })
 
-            //console.log(moduleModifiedMapJS)
-            //console.log(moduleModifiedMapCSS)
-            //console.log(moduleModifiedMapVendor)
+            function updateDevManifest(bundleName, module) {
+                try {
+
+
+                    var versions = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
+
+                    // If this is a production release, toggle the production flag which means it'll load for end users
+                    var devVersion = findByMatchingProperties(versions, {development: true})[0]
+
+                    devVersion.modules[bundleName][module] = 'development'
+                    devVersion.created = printDate()
+                    devVersion.timestamp = new Date()
+
+                    fs.writeFile(manifestFile, JSON.stringify(versions), function (err, data) {
+                        if (err) {
+                            return console.log(err);
+                        }
+                    });
+                } catch (e) {
+                }
+            }
+
+            function buildDistribution(newVersionManifest) {
+
+                Object.keys(newVersionManifest.modules.js).forEach(function (moduleName) {
+                    exec('gulp js-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
+                        console.log(moduleName, stderr);
+                    });
+                })
+
+                Object.keys(newVersionManifest.modules.css).forEach(function (moduleName) {
+                    exec('gulp scss-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
+                        console.log(moduleName, stderr);
+                    });
+                })
+
+                Object.keys(newVersionManifest.modules.vendor).forEach(function (moduleName) {
+                    exec('gulp js-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
+                        console.log(moduleName, stderr);
+                    });
+                })
+            }
+
+
+
+            function compareModuleRelease(bundleDir, fileType, devModulesModified, oldVersion, newVersion) {
+
+                var oldVersionModules = oldVersion.modules[bundleDir]
+                var newVersionModules = newVersion.modules[bundleDir]
+
+                var keys = Object.keys(devModulesModified)
+                for (var i = 0; i < keys.length; i++) {
+
+                    var moduleName = keys[i]
+                    var modifiedTime = devModulesModified[keys[i]]
+                    var stats
+
+                    try {
+                        stats = fs.statSync(opts.versionsDir + oldVersion.name + '/' + bundleDir + '/' + moduleName + "." + fileType)
+                    } catch (e) {
+                        stats = false
+                    }
+
+                    if (!modifiedTime)                     newVersionModules[moduleName] = distributionName
+                    else if (modifiedTime > stats.mtime)   newVersionModules[moduleName] = distributionName
+                    else newVersionModules[moduleName] =   oldVersionModules[moduleName] != 'development' ? oldVersionModules[moduleName] : distributionName
+                    // Or ... do nothing;
+                    // and we'll collect the version name from the previous version
+                }
+            }
 
             // Compare to most recent deployed release
             //for(var j=0; j < versionNames.length; j++){
@@ -89,27 +176,25 @@ module.exports = {
             // Iterate through all distribution types starting
             // with the newest until all modules are collected
 
-            this.compareModuleRelease('vendor', 'js', moduleModifiedMapVendor, oldVersion, newVersion)
-            this.compareModuleRelease('js', 'js', moduleModifiedMapJS, oldVersion, newVersion)
-            this.compareModuleRelease('css', 'css', moduleModifiedMapCSS, oldVersion, newVersion)
+            compareModuleRelease('vendor', 'js', moduleModifiedMapVendor, oldVersion, newVersion)
+            compareModuleRelease('js', 'js', moduleModifiedMapJS, oldVersion, newVersion)
+            compareModuleRelease('css', 'css', moduleModifiedMapCSS, oldVersion, newVersion)
             // If module is found, add to the dictionary
             // If it's not found, then we must use the development version
-            //}
 
-            //console.log(developmentModulesJS)
-            //console.log(developmentModulesCSS)
-            //console.log(developmentModulesVendor)
         } else {
 
             // First distribution
-            for (var i = 0; i < dir.modules.length; i++) {
+            for (var i = 0; i < opts.modules.length; i++) {
                 // Find last modified file.  If the development folder is more recently modified than
                 // the last found module version, replace it with the new name.
                 newVersion.modules.js[dir.modules[i]] = distributionName
             }
-            Object.keys(dir.scssGlobs).forEach(function (module) {
-                newVersion.modules.css[module] = distributionName
-            })
+
+            // TODO Object.keys(dir.scssGlobs).forEach(function (module) {
+            //    newVersion.modules.css[module] = distributionName
+            //})
+
             newVersion.modules.vendor = {vendor: distributionName ? distributionName : 'development'}
         }
 
@@ -118,95 +203,21 @@ module.exports = {
 
 
         // Now build new minified modules into the new distriubtion
-        this.buildDistribution(newVersion)
+        buildDistribution(newVersion)
 
         // And remove any older entries if needed
+
         //if(versions.length > 5){
         //	var oldest = versions.pop()
         //	fs.unlink(dir.dist + oldest.name, function(err, data){
         //	})
         //}
 
-        // This will be the new distribution directory
-        if (!fs.existsSync(dir.dist + distributionName)) {
-            fs.mkdirSync(dir.dist + distributionName);
-        }
-
-        fs.writeFile(dir.dist + 'manifest.json', JSON.stringify(versions), function (err, data) {
+        fs.writeFile(manifestFile, JSON.stringify(versions), function (err, data) {
             if (err) {
                 return console.log(err);
             }
         });
 
-    },
-
-    buildDistribution: function (newVersionManifest) {
-
-        Object.keys(newVersionManifest.modules.js).forEach(function (moduleName) {
-            exec('gulp js-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
-                console.log(moduleName, stderr);
-            });
-        })
-
-        Object.keys(newVersionManifest.modules.css).forEach(function (moduleName) {
-            exec('gulp scss-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
-                console.log(moduleName, stderr);
-            });
-        })
-
-        Object.keys(newVersionManifest.modules.vendor).forEach(function (moduleName) {
-            exec('gulp js-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
-                console.log(moduleName, stderr);
-            });
-        })
-    },
-
-    compareModuleRelease: function (bundleDir, fileType, devModulesModified, oldVersion, newVersion) {
-
-        var oldVersionModules = oldVersion.modules[bundleDir]
-        var newVersionModules = newVersion.modules[bundleDir]
-
-        var keys = Object.keys(devModulesModified)
-        for (var i = 0; i < keys.length; i++) {
-
-            var moduleName = keys[i]
-            var modifiedTime = devModulesModified[keys[i]]
-            var stats
-
-            try {
-                stats = fs.statSync(options.versionsDir + oldVersion.name + '/' + bundleDir + '/' + moduleName + "." + fileType)
-            } catch (e) {
-                stats = false
-            }
-
-            if (!modifiedTime)                     newVersionModules[moduleName] = distributionName
-            else if (modifiedTime > stats.mtime) newVersionModules[moduleName] = distributionName
-            else
-                newVersionModules[moduleName] = oldVersionModules[moduleName] != 'development' ? oldVersionModules[moduleName] : distributionName
-            // Or ... do nothing;
-            // and we'll collect the version name from the previous version
-        }
-    },
-
-    updateDevManifest: function (bundleName, module) {
-        try {
-
-
-            var versions = JSON.parse(fs.readFileSync(options.versionsDir + 'manifest.json', 'utf8'))
-
-            // If this is a production release, toggle the production flag which means it'll load for end users
-            var devVersion = findByMatchingProperties(versions, {development: true})[0]
-
-            devVersion.modules[bundleName][module] = 'development'
-            devVersion.created = printDate()
-            devVersion.timestamp = new Date()
-
-            fs.writeFile(options.versionsDir + 'manifest.json', JSON.stringify(versions), function (err, data) {
-                if (err) {
-                    return console.log(err);
-                }
-            });
-        } catch (e) {
-        }
     }
 }

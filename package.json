@@ -1,6 +1,6 @@
 {
-  "name": "noble-scaffold.js",
-  "version": "0.0.0",
+  "name": "unbaffled.js",
+  "version": "0.0.3",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,34 +8,39 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bZichett/noble-scaffold.js.git"
+    "url": "git+https://github.com/bZichett/unbaffled.js.git"
   },
   "author": "nobalai",
-  "type": "MIT",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/bZichett/noble-scaffold.js/issues"
+    "url": "https://github.com/bZichett/unbaffled.js/issues"
   },
-  "homepage": "https://github.com/bZichett/noble-scaffold.js#readme",
-  "devDependencies": {
+  "homepage": "https://github.com/bZichett/unbaffled.js#readme",
+  "dependencies": {
     "babel-core": "^6.5.2",
     "babel-plugin-transform-decorators-legacy": "^1.3.4",
     "babel-preset-es2015-webpack2": "^1.0.0",
     "babel-preset-react": "^6.5.0",
     "chai": "^3.5.0",
-    "deep-merge": "^1.0.0",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
     "gulp-concat": "^2.6.0",
     "gulp-exec": "^2.1.2",
     "gulp-mocha": "^2.2.0",
     "gulp-ruby-sass": "^2.0.6",
+    "gulp-util": "^3.0.7",
     "gulp-watch": "^4.3.5",
     "gulp-webpack": "^1.5.0",
     "project-name-generator": "^2.1.2",
     "should": "^8.2.2",
     "webpack": "^2.0.7-beta",
     "webpack-dev-server": "^2.0.0-beta",
+    "webpack-merge": "^0.7.3",
     "webpack-split-by-path": "0.0.8",
+    "webpack-stream": "^3.1.0",
     "yargs": "^4.2.0"
+  },
+  "devDependencies": {
+
   }
 }

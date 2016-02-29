@@ -1,15 +1,15 @@
-// NODE
+/** NODE */
 var path = require('path');
 
-// GULP TOOLS
+/** GULP TOOLS */
 var gulp = require('gulp')
 var concat = require('gulp-concat');
 var babel = require('gulp-babel');
 var sass = require("gulp-ruby-sass");
 var mocha = require("gulp-mocha")
 
-// SCAFFOLD
-var setupRelease = require("setup").setupRelease
+/** SCAFFOLD */
+var setupRelease = require("./src/setup").setupRelease
 
 module.exports = function(options) {
 
@@ -18,22 +18,28 @@ module.exports = function(options) {
     options.entryPoints = options.entryPoints || false
     if(!options.entryPoints) throw Error('Need to specify at least one entry point');
 
-    options.modules = options.modules || {};
     if(!options.modules) throw Error('Need to specify at least one module');
 
     options.versionsDir = options.versionsDir || '/dist';
-    if(!options.modules) throw Error('Need to specify location of version directory');
+
+    var es6Modules = options.modules.language.es6
+
+    options.modules.list = {
+        es6 : Object.keys(es6Modules)
+    }
+
+    var dir = options.dir
+
+    dir.dist = path.resolve(dir.dist)
 
     var globs = {
         tests: ['test/*-test.js'].concat(
-            Object.keys(options.modules.es6).map(function(moduleName){return options.modules.es6[moduleName][0]}))
+            Object.keys(es6Modules).map(function(moduleName){return es6Modules[moduleName][0]}))
 
     }
 
-    console.log(globs)
-
-    gulp.task('setupRelease', function(){
-        setupRelease()
+    gulp.task('default', function(){
+        setupRelease(options)
     })
 
 

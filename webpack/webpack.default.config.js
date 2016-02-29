@@ -1,35 +1,34 @@
-var webpack = require("webpack");
-//var webpackDevServer = require('webpack-dev-server');
-//var CommonsChunkPlugin = webpack.optimize.CommonsChunkPlugin
-var SplitByPathPlugin = require('webpack-split-by-path');
-
 var path = require("path");
+var ROOT_DIR = path.resolve(__dirname, '..')
+var EXAMPLE_DIR = path.join(ROOT_DIR, 'example')
 
-var node_modules_dir = path.resolve(__dirname, 'node_modules');
-var example_dir = path.resolve(__dirname, 'example')
+var webpack = require("webpack");
+
+var node_modules_dir = path.resolve(ROOT_DIR, 'node_modules');
+var example_dir = path.resolve(ROOT_DIR, 'example')
 
 var nodeEnv = process.env.NODE_ENV || 'development';
 
-var DeepMerge = require('deep-merge');
+var merge = require('webpack-merge')
 
-var deepmerge = DeepMerge(function (target, source, key) {
-    if (target instanceof Array) {
-        return [].concat(target, source);
-    }
-    return source;
+var definePlugin = new webpack.DefinePlugin({
+    __DEV__: JSON.stringify(JSON.parse(process.env.BUILD_DEV || 'true')),
+    __PRERELEASE__: JSON.stringify(JSON.parse(process.env.BUILD_PRERELEASE || 'false'))
 });
 
 var defaultConfig = {
+    context: EXAMPLE_DIR,
     devtool: '#eval-source-map',
     __filename: true,
-    __dirname: true,
-    context: __dirname,
+    ROOT_DIR: true,
     entry: {
-        app: path.resolve(__dirname, "example/app/main.js")
+        app: "../example/app/main.js"
+    },
+    devServer: {
+        contentBase: "../dist",
     },
     output: {
-        path: path.join(__dirname, "build"),
-        publicPath: path.join(__dirname, "build"),
+        // path: Must implement by inherited config file
         filename: "[name].js",
         //filename: "[name]-[chunkhash].js",
         chunkFilename: "[name].js",
@@ -37,28 +36,28 @@ var defaultConfig = {
     },
     test: /(\.jsx?)$/,
     loaders: [
-        //{
-        //    test: /\.html$/,
-        //    loader: 'file',
-        //    query: {
-        //        name: '[name].[ext]'
-        //    }
-        //},
-        //{
-        //    test: /\.css$/,
-        //    loaders: [
-        //        'style',
-        //        'css'
-        //    ]
-        //},
-        //{
-        //    test: /\.(js|jsx)$/,
-        //    exclude: /node_modules/,
-        //    loaders: [
-        //        // 'react-hot',
-        //        'babel-loader'
-        //    ]
-        //},
+        {
+            test: /\.html$/,
+            loader: 'file',
+            query: {
+                name: '[name].[ext]'
+            }
+        },
+        {
+            test: /\.css$/,
+            loaders: [
+                'style',
+                'css'
+            ]
+        },
+        {
+            test: /\.(js|jsx)$/,
+            exclude: /node_modules/,
+            loaders: [
+                // 'react-hot',
+                'babel-loader'
+            ]
+        },
     ],
     exclude: /node_modules/,
     query: {
@@ -77,60 +76,8 @@ var defaultConfig = {
         ],
         root: [example_dir, node_modules_dir],
     },
-    plugins: [
-        new SplitByPathPlugin([
-                {
-                    name: 'app',
-                    path: path.join(__dirname, 'example/app')
-                },
-                {
-                    name: 'vendor',
-                    path: path.join(__dirname, 'example/vendor')
-                },
-                {
-                    name: 'moduleA',
-                    path: path.join(__dirname, 'example/moduleA')
-                },
-                {
-                    name: 'moduleB',
-                    path: path.join(__dirname, 'example/moduleB')
-                },
-                {
-                    name: 'lib',
-                    path: path.join(__dirname, 'example/lib')
-                }
-            ]
-        ),
-        //new webpack.LoaderOptionsPlugin({
-        //    minimize: true,
-        //    debug: false
-        //}),
-        //new webpack.optimize.UglifyJsPlugin({
-        //    compress: {
-        //        warnings: false
-        //    },
-        //    sourceMap: false
-        //}),
-        //new webpack.DefinePlugin({
-        //    'process.env': { NODE_ENV: JSON.stringify(nodeEnv) }
-        //})
-
-        //new CommonsChunkPlugin({
-        //    name: "admin-commons",
-        //    chunks: ["adminPageA", "adminPageB"]
-        //}),
-        //new CommonsChunkPlugin({
-        //    name: "commons",
-        //    chunks: ["pageA", "pageB", "admin-commons.js"],
-        //    minChunks: 2
-        //}),
-        //new CommonsChunkPlugin({
-        //    name: "c-commons",
-        //    chunks: ["pageC", "adminPageC"]
-        //}),
-    ]
+    plugins: [definePlugin]
 }
-
 
 if (process.env.NODE_ENV !== 'production') {
     defaultConfig.devtool = 'source-map';
@@ -140,6 +87,6 @@ if (process.env.NODE_ENV !== 'production') {
 module.exports.webpackConfig = defaultConfig
 
 module.exports.config = function (overrides) {
-    return deepmerge(defaultConfig, overrides || {});
+    return merge(defaultConfig, overrides || {});
 }
 

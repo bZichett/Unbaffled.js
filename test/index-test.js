@@ -7,7 +7,7 @@ var exec = require('gulp-exec')
 var nS = nobleScaffold(
     {
         entryPoints: {
-            app: exampleDir +'app/main.js'
+            app: exampleDir + 'app/main.js'
         },
         versionsDir: '../build/',
         modules: {
@@ -38,14 +38,14 @@ var nS = nobleScaffold(
         }
     })
 
-describe('#noble-scaffold', function(){
+describe('#unbaffled', function(){
     console.log("nS1", nS.modules.es6)
     nS.modules.es6.should.exist
 
 
 })
 
-describe('#noble-scaffold', function(){
+describe('#unbaffled', function(){
     console.log("nS1", nS.modules.versionsDir)
 })
 
