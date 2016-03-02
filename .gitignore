@@ -1,3 +1,7 @@
+example/build/*
+!example/build/index.html
+
+example/manifest*
 .idea
 node_modules
 npm-debug.log

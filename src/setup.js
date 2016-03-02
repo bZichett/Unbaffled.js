@@ -1,53 +1,99 @@
+/** GULP */
+var exec = require('gulp-exec')
+var gutil = require('gulp-util')
+var magenta = gutil.colors.magenta('123')
+
+/** DIRECTORY AND FILES */
+var rimraf = require('rimraf')
+var copy = require('directory-copy')
 var fs = require('fs')
 var path = require('path')
 
+/** UTILITIES */
+var utils = require('./utils')
+var getNextVersion = utils.getNextVersion
+var printDate = utils.printDate
+var getProductionVersion = utils.getProductionVersion
+var setupDirs = utils.setupDirs
+var getManifest = utils.getManifest
+
+/** MISC. */
+var getGitBranchName = require('git-branch-name')
+const md5ify = require('md5ify')
 var argv = require('yargs').argv;
 var generate = require('project-name-generator')
-var exec = require('gulp-exec')
+var Q = require('q');
 
-var utils = require('./utils')
-var printDate = utils.printDate
-var findByMatchingProperties = utils.findByMatchingProperties
-var getNextVersion = utils.getNextVersion
+/** Steps
+ Produce temporary build
+ Compare hash of all files in development build to last production versions files
+ If different, then replace, else insert unmodified reference to module version
+ Build new version with the most recent references
+ */
+
+var copyFileSync = function(srcFile, destFile, encoding) {
+	var content = fs.readFileSync(srcFile, encoding);
+	fs.writeFileSync(destFile, content, encoding);
+}
 
 module.exports = {
-    setupRelease: function (opts) {
 
-        console.log(opts.dir.dist)
+    setupRelease: function (opts, PRODUCTION) {
 
-        var dir = opts.dir
+	    var deferred = Q.defer();
+
+	    var cssModuleNames = []
+	    var updatedModules = []
+	    var dir = opts.dir
+
+	    var paths = setupDirs(dir)
+
+	    var versionManifestPath = paths.versions
+	    var devManifestPath = paths.devVersion
+
+        var DEVELOPMENT = !PRODUCTION
+
         var modules = opts.modules
-        var manifestFile = path.resolve(dir.versionManifest.location, dir.versionManifest.name + '.json')
 
+	    var versions = getManifest(versionManifestPath)
+
+	    var versionNameToIdMap = new Map()
+	    versions.forEach(function(version){
+		    versionNameToIdMap.set(version.name, version.id)
+	    })
+		console.log(versionNameToIdMap)
+	    var devVersion = getManifest(devManifestPath)
+
+        /** Find the current production entry in the manifest
+         If this is a production release, toggle the production
+         flag which means it'll load for end users */
+        var newId
+
+	    var productionVersion = getProductionVersion(versions)
+	    if (productionVersion)  productionVersion.production = false
+
+        if (PRODUCTION) newId = getNextVersion(productionVersion ? productionVersion.id : "0.0.0", argv.type ? argv.type : 'patch')
+        else            newId = productionVersion ? productionVersion.id : "0.0.0"
+
+        // Now create random name version name and a directory for the new version files
         var distributionName = generate().dashed
 
-        dir.release = path.join(dir.release, distributionName)
-
-        // Create /build and version manifest if they don't exist
-        if (!fs.existsSync(dir.dist)) fs.mkdirSync(dir.dist);
-        if (!fs.existsSync(manifestFile)) fs.writeFileSync(manifestFile, JSON.stringify([]))
-
-        var versions = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
-
-        var versionNames = versions.map(function (version) {
-            return version.name
-        })
-
-        // If this is a production release, toggle the production flag which means it'll load for end users
-        if (!!argv.production) {
-            var productionVersion = findByMatchingProperties(versions, {production: true})[0]
-            if (productionVersion)
-                productionVersion.production = false
+        if(PRODUCTION){
+            dir.newVersionDir = path.join(dir.release, newId + "-" + distributionName)
+            fs.mkdirSync(dir.newVersionDir)
+            fs.mkdirSync(dir.newVersionDir + '/js')
+            fs.mkdirSync(dir.newVersionDir + '/css')
+            fs.mkdirSync(dir.newVersionDir + '/vendor')
         }
+
+	    getGitBranchName(path.resolve(__dirname, '../'), function(err, branchName){
 
         var newVersion = {
             name: distributionName,
-            id: getNextVersion(productionVersion ? productionVersion.id : "0.0.0", argv.type ? argv.type : 'patch'),
+            id: newId,
             type: argv.type ? argv.type : 'patch',
-            //branch: exec('git rev-parse --abbrev-ref HEAD | cat', function (err, stdout, stderr) {
-            //	return stdout;
-            //}),
-            production: !!argv.production,
+            branch: branchName,
+            production: PRODUCTION,
             created: printDate(),
             timestamp: new Date(),
             notes: argv.notes ? argv.notes : "N/A",
@@ -55,117 +101,107 @@ module.exports = {
             modules: {'js': {}, 'css': {}, 'vendor': {}}
         }
 
-        // If an old version exists
+	    function updateDevManifest(bundleName) {
+		    try {
+			    newVersion.name = 'dev-' + newVersion.name
+			     //devVersion.modules[bundleName][module] = 'development'
+			    fs.writeFile(devManifestPath, JSON.stringify(newVersion), function (err, data) {
+				    if (err) {
+					    return console.log(err);
+				    }
+			    });
 
-        var developmentExists = false
-        try {
-            var stats = fs.lstatSync( path.resolve(dir.dist, 'development'))
-            if (stats.isDirectory()) {
-                developmentExists = true
-            }
-        } catch (e) {}
+		    } catch (e) {
+		    }
+	    }
 
-        if (versions.length > 0 && developmentExists) {
-            console.log("Old versions exist")
+        if (PRODUCTION && versions.length > 0 && devVersion) {
+            gutil.log("Old versions exist", magenta)
 
-            // We need to compare the modified date of the last distribution module
-            // with the modified date of the development module.
-            // By doing this, we'll collect the names
-            // of the most recently changed modules
-            //var developmentModulesJS = fs.readdirSync(dir.dist + 'development/js');
+            /** We need to compare the modified date of the last distribution module
+                 with the modified date of the development module.
+                By doing this, we'll collect the names
+                of the most recently changed modules
+             */
+
+	        //var developmentModulesJS = fs.readdirSync(dir.dist + 'development/js');
             //var developmentModulesCSS = fs.readdirSync(dir.dist + 'development/css');
             //var developmentModulesVendor = fs.readdirSync(dir.dist + 'development/vendor');
 
             var moduleModifiedMapJS = {}
+	        var moduleModifiedMapCSS = {}
 
-            opts.modules.language.es6.forEach(function (module) {
-                var stats = fs.statSync()
-                moduleModifiedMapJS[module] = stats.mtime
+            opts.modules.list.es6.forEach(function (module) {
+
+                try {
+	                moduleModifiedMapJS[module] = md5ify(dir.dist + '/development/' + 'js' + '/' + module + '.js')
+                } catch(e){
+	                //console.error("No JS file here")
+                }
+
+	            try {
+		            moduleModifiedMapCSS[module] = md5ify(dir.dist + '/development/' + 'css' + '/' + module + '.css')
+		            cssModuleNames.push(module)
+	            } catch(e){
+		            //console.error("No CSS file here")
+	            }
             })
-
-            var moduleModifiedMapCSS = {}
-
-            // TODO Object.keys(dir.scssGlobs).forEach(function (module) {
-            //    var stats = fs.statSync(dir.dist + 'development/' + 'css' + '/' + module + '.css')
-            //    moduleModifiedMapCSS[module] = stats.mtime
-            //})
 
             var moduleModifiedMapVendor = {}
             var vendorModules = ['vendor']
-            vendorModules.forEach(function (module) {
-                var stats = fs.statSync(dir.dist + 'development/' + 'vendor' + '/' + module + '.js')
-                moduleModifiedMapVendor[module] = stats.mtime
 
-            })
+	        //vendorModules.forEach(function (module) {
+            //    var stats = fs.statSync(dir.dist + '/development/' + 'vendor' + '/' + module + '.js')
+            //    moduleModifiedMapVendor[module] = stats.mtime
+            //
+            //})
 
-            function updateDevManifest(bundleName, module) {
-                try {
-
-
-                    var versions = JSON.parse(fs.readFileSync(manifestFile, 'utf8'))
-
-                    // If this is a production release, toggle the production flag which means it'll load for end users
-                    var devVersion = findByMatchingProperties(versions, {development: true})[0]
-
-                    devVersion.modules[bundleName][module] = 'development'
-                    devVersion.created = printDate()
-                    devVersion.timestamp = new Date()
-
-                    fs.writeFile(manifestFile, JSON.stringify(versions), function (err, data) {
-                        if (err) {
-                            return console.log(err);
-                        }
-                    });
-                } catch (e) {
-                }
-            }
-
-            function buildDistribution(newVersionManifest) {
-
-                Object.keys(newVersionManifest.modules.js).forEach(function (moduleName) {
-                    exec('gulp js-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
-                        console.log(moduleName, stderr);
-                    });
-                })
-
-                Object.keys(newVersionManifest.modules.css).forEach(function (moduleName) {
-                    exec('gulp scss-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
-                        console.log(moduleName, stderr);
-                    });
-                })
-
-                Object.keys(newVersionManifest.modules.vendor).forEach(function (moduleName) {
-                    exec('gulp js-' + moduleName + ' --production --distributionName ' + distributionName, function (err, stdout, stderr) {
-                        console.log(moduleName, stderr);
-                    });
-                })
-            }
-
-
-
-            function compareModuleRelease(bundleDir, fileType, devModulesModified, oldVersion, newVersion) {
+            function compareModuleRelease(bundleDir, fileType, devModulesHash, oldVersion, newVersion) {
 
                 var oldVersionModules = oldVersion.modules[bundleDir]
                 var newVersionModules = newVersion.modules[bundleDir]
+	            var oldVersionAbsPath
 
-                var keys = Object.keys(devModulesModified)
+                var keys = Object.keys(devModulesHash)
                 for (var i = 0; i < keys.length; i++) {
 
                     var moduleName = keys[i]
-                    var modifiedTime = devModulesModified[keys[i]]
-                    var stats
+                    var devHash = devModulesHash[keys[i]]
+
+	                var hash
+
 
                     try {
-                        stats = fs.statSync(opts.versionsDir + oldVersion.name + '/' + bundleDir + '/' + moduleName + "." + fileType)
+	                    oldVersionAbsPath = dir.release + '/' +
+		                    versionNameToIdMap.get(oldVersion.modules[bundleDir][moduleName]) + '-' + oldVersion.modules[bundleDir][moduleName] +
+		                    '/' + bundleDir + '/' + moduleName + "." + fileType
+	                    hash = md5ify(oldVersionAbsPath)
                     } catch (e) {
-                        stats = false
+	                    // A new file
+	                    // console.log("New file or hash failed")
+	                    hash = false
                     }
 
-                    if (!modifiedTime)                     newVersionModules[moduleName] = distributionName
-                    else if (modifiedTime > stats.mtime)   newVersionModules[moduleName] = distributionName
-                    else newVersionModules[moduleName] =   oldVersionModules[moduleName] != 'development' ? oldVersionModules[moduleName] : distributionName
-                    // Or ... do nothing;
-                    // and we'll collect the version name from the previous version
+                    if (devHash != hash){
+	                    // File has been updated.
+	                    newVersionModules[moduleName] = distributionName
+	                    updatedModules.push(bundleDir + '/' + moduleName)
+	                    copyFileSync(
+		                    path.resolve(dir.development, bundleDir, moduleName + "." + fileType),
+		                    path.resolve(dir.newVersionDir, bundleDir, moduleName + "." + fileType))
+                    }
+                    else {
+	                    // Copy from older versions
+	                     newVersionModules[moduleName] =
+		                    oldVersionModules[moduleName] != 'development' ? oldVersionModules[moduleName] : distributionName
+
+	                     //copyFileSync(
+		                 //   oldVersionAbsPath,
+		                 //   path.resolve(dir.newVersionDir, bundleDir, moduleName + "." + fileType))
+                    }
+	                    // Or ... do nothing;
+	                    // and we'll collect the version name from the previous version
+	                    // This is less computationally efficient though in multiple places
                 }
             }
 
@@ -175,35 +211,59 @@ module.exports = {
 
             // Iterate through all distribution types starting
             // with the newest until all modules are collected
-
             compareModuleRelease('vendor', 'js', moduleModifiedMapVendor, oldVersion, newVersion)
             compareModuleRelease('js', 'js', moduleModifiedMapJS, oldVersion, newVersion)
             compareModuleRelease('css', 'css', moduleModifiedMapCSS, oldVersion, newVersion)
+
             // If module is found, add to the dictionary
             // If it's not found, then we must use the development version
 
         } else {
+			if(PRODUCTION){
 
-            // First distribution
-            for (var i = 0; i < opts.modules.length; i++) {
-                // Find last modified file.  If the development folder is more recently modified than
-                // the last found module version, replace it with the new name.
-                newVersion.modules.js[dir.modules[i]] = distributionName
-            }
+	            /** First production distribution */
+	            for (var i = 0; i < opts.modules.list.es6.length; i++) {
+		            var moduleName = opts.modules.list.es6[i]
+		            //console.log("MODULE", i, " : ", moduleName)
+	                // Find last modified file.  If the development folder is more recently modified than
+	                // the last found module version, replace it with the new name.
+	                newVersion.modules.js[opts.modules.list.es6[i]] = distributionName
 
-            // TODO Object.keys(dir.scssGlobs).forEach(function (module) {
-            //    newVersion.modules.css[module] = distributionName
-            //})
+		            try {
+			            if(fs.readFileSync(path.resolve(dir.development, 'css', moduleName + ".css")))
+				            newVersion.modules.css[moduleName] = distributionName
+		            } catch(e){}
 
-            newVersion.modules.vendor = {vendor: distributionName ? distributionName : 'development'}
+	            }
+
+				cssModuleNames.forEach(function (module) {
+	                newVersion.modules.css[module] = distributionName
+	            })
+
+	            newVersion.modules.vendor = {vendor: distributionName ? distributionName : 'development'}
+
+				// Now copy all development files to the new version
+				copy({ src: path.resolve(dir.development)
+						, dest: dir.newVersionDir
+						, excludes: [ /^\./ ] // Exclude hidden files
+					}
+					, function () {
+						console.log('Bulk copy from development complete')
+					})
+
+			} else {
+
+				/** Overwrite development manifest */
+				updateDevManifest(distributionName)
+			}
+
         }
 
         // Now add the currently released version to the manifest
         versions.unshift(newVersion)
 
-
         // Now build new minified modules into the new distriubtion
-        buildDistribution(newVersion)
+        //buildDistribution(newVersion)
 
         // And remove any older entries if needed
 
@@ -213,11 +273,26 @@ module.exports = {
         //	})
         //}
 
-        fs.writeFile(manifestFile, JSON.stringify(versions), function (err, data) {
-            if (err) {
-                return console.log(err);
-            }
-        });
+		if(PRODUCTION){
+			//console.log(versions.length)
+			//console.log(updatedModules.length > 0)
+			if(versions.length == 1 || updatedModules.length > 0) {
+				fs.writeFile(versionManifestPath, JSON.stringify(versions), function (err, data) {
+					if (err) {
+						return console.error(err);
+					}
+				});
+			}
+			else {
+				// No changes, delete the directory
+				console.log("No changes, delete the directory")
+				rimraf(dir.newVersionDir, function(err){})
+			}
+		}
 
+        return deferred.resolve(newVersion);
+	    })
+
+	    return deferred.promise;
     }
 }

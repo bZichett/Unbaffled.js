@@ -1,3 +1,8 @@
-import C1 from '../moduleC/C1'
+var css = require("./scss/moduleA.scss");
 
-export default 'A1'
+import C1 from 'moduleC/C1'
+
+console.log("CSS: ")
+console.log(css)
+
+export default ('A1 --> C1 = ' + C1)

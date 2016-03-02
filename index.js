@@ -7,13 +7,11 @@ var path = require('path');
 var gulp = require('gulp')
 var concat = require('gulp-concat');
 var babel = require('gulp-babel');
-var sass = require("gulp-ruby-sass");
+//var sass = require("gulp-ruby-sass");
 var mocha = require("gulp-mocha")
 var merge = require("webpack-merge")
 
 /** SCAFFOLD */
-
-var gulpfile = require('./src/gulpfile')
 
 var tasks = [
 	//require('./src/gulpfile'),
@@ -26,9 +24,6 @@ var tasks = [
 module.exports = function (options) {
 
 	options = options || {};
-
-	options.entryPoints = options.entryPoints || false
-	if (!options.entryPoints) throw Error('Need to specify at least one entry point');
 
 	if (!options.modules) throw Error('Need to specify at least one module');
 
@@ -56,8 +51,6 @@ module.exports = function (options) {
 			development: path.join(dir.root, dir.dist, dir.development)
 		}
 	})
-
-	console.log("Options", options)
 
 	var globs = {
 		tests: ['test/*-test.js'].concat(

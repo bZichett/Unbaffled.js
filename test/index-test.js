@@ -2,7 +2,7 @@ var nobleScaffold = require('../index');
 
 var exampleDir = '../example/';
 var vendorDir = exampleDir + 'vendor/';
-var exec = require('gulp-exec')
+// var exec = require('gulp-exec')
 
 var nS = nobleScaffold(
     {
