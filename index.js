@@ -1,24 +1,12 @@
-/* global require */
-
 /** NODE */
 var path = require('path');
-
-/** GULP TOOLS */
-var gulp = require('gulp')
-var concat = require('gulp-concat');
-var babel = require('gulp-babel');
-//var sass = require("gulp-ruby-sass");
-var mocha = require("gulp-mocha")
 var merge = require("webpack-merge")
 
 /** SCAFFOLD */
 
+// These will be registered in the global namespace
 var tasks = [
-	//require('./src/gulpfile'),
 	require('./src/tasks/webpack'),
-	require('./src/tasks/scss'),
-	require('./src/tasks/test'),
-	require('./src/tasks/es6')
 ]
 
 module.exports = function (options) {
