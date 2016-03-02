@@ -96,7 +96,7 @@ var config = {
 					cacheDirectory: true,
 					//presets: ['react', 'es2015-webpack2'],
 					presets: [
-						require.resolve("babel-preset-react"),
+						// require.resolve("babel-preset-react?pragma=m"),
 						require.resolve('babel-preset-es2015-webpack2')
 					],
 					// TODO Optimization: Fails right now...
@@ -120,6 +120,12 @@ var config = {
 		// Reference: http://webpack.github.io/docs/list-of-plugins.html#noerrorsplugin
 		// Only emit files when there are no errors
 		new webpack.NoErrorsPlugin(),
+
+		// Make the JSX pragma function available everywhere without the need
+		// to use "require"
+		//new webpack.ProvidePlugin({
+		//	['m']: path.join(__dirname, "utils", "element"),
+		//}),
 
 		// Reference: http://webpack.github.io/docs/list-of-plugins.html#dedupeplugin
 		// Dedupe modules in the output
