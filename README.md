@@ -27,9 +27,7 @@ while programmatically generating a versions manifest file.
 ## Example
 
 In the example version-manifest.json below, a minor update was released (<code>gulp release</code>)
- which only modified <code>example/src/moduleA.js</code>.  On the client side production version, the developer will
- need to either manually patch in the files or automate this process with a server side build script
-  (I'm currently working on releasing an open source version of my django/python solution soon)
+ which only modified <code>example/src/moduleA.js</code>.
 
 ### Version manifest array: 
 	[
@@ -104,6 +102,10 @@ The build directory will contain:
 	        │   
 	        └── vendor
 
+On the client side production version, the developer will
+need to either manually patch in the generated files into an HTML file or automate this process with a server side build script
+(I'm currently working on releasing an open source version of my django/python solution soon)
+  
 ### TODO 
 
 * Add vendor module separation
