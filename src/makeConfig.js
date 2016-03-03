@@ -30,7 +30,10 @@ module.exports = function(options, uB_wConfig, keyRegulator) {
 		plugins: [
 			 new webpack.ProvidePlugin(
 				options.webpackConfig.externals
-			)
+			),
+
+			// User definitions
+			new webpack.DefinePlugin(options.define ? options.define : {}),
 		],
 		resolve: {
 			modules: jsKeys.map(function(moduleName){
