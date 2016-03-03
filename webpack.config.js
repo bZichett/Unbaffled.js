@@ -81,7 +81,6 @@ var config = {
 		// Only emit files when there are no errors
 		new webpack.NoErrorsPlugin(),
 		extractSCSS,
-		new webpack.optimize.DedupePlugin(),
 		new webpack.DefinePlugin({
 			'process.env': {
 				'NODE_ENV': JSON.stringify('production')
@@ -95,6 +94,7 @@ var config = {
 				minimize: true,
 				debug: false
 			}),
+			new webpack.optimize.DedupePlugin(),
 			new webpack.optimize.UglifyJsPlugin({
 				compress: {drop_console: true}
 			}),
