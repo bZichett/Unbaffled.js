@@ -3,6 +3,9 @@ var path = require('path');
 
 var merge = require('webpack-merge')
 
+var getProductionWebpackConfig =  require('./src/tasks/webpack').getProductionWebpackConfig
+var getDevelopmentWebpackConfig = require('./src/tasks/webpack').getProductionWebpackConfig
+
 /** SCAFFOLD */
 
 // These will be registered in the global namespace
@@ -53,5 +56,9 @@ module.exports = function (options) {
 		tasks[i](options)
 	}
 
-	return options
+	return {
+		options: options,
+		productionWebpackConfig: getProductionWebpackConfig(),
+		developmentWebpackConfig: getDevelopmentWebpackConfig()
+	}
 };

@@ -37,9 +37,6 @@ function doneWithRelease(version){
 
 module.exports = function (options) {
 
-	var devKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
-					user:      { keep: options.keys.production,    remove: options.keys.development}}
-
 	var prodKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
 					 user:      { keep: options.keys.production,    remove: options.keys.development}}
 
@@ -122,4 +119,16 @@ module.exports = function (options) {
 		});
 	});
 
+}
+
+module.exports.getProductionWebpackConfig = function(options){
+	var prodKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
+		user:      { keep: options.keys.production,    remove: options.keys.development}}
+	return makeConfig(options, uB_wConfig, prodKeys)
+}
+
+module.exports.getDevelopmentWebpackConfig = function(options){
+	var devKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
+		user:      { keep: options.keys.production,    remove: options.keys.development}}
+	return makeConfig(options, uB_wConfig, devKeys)
 }
