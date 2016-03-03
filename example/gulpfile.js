@@ -52,11 +52,6 @@ var options = {
         fileGlob: '-test'
     },
 
-    vendorFiles: [
-        (dir.vendor + 'frameworkX.js'),
-        (dir.vendor + 'pluginY.js')
-    ],
-
     modules: {
         js: {
             // NOTE: Object form to allow future options for specific modules
