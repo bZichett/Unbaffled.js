@@ -1,5 +1,4 @@
 /** GULP */
-var exec = require('gulp-exec')
 var gutil = require('gulp-util')
 
 /** DIRECTORY AND FILES */

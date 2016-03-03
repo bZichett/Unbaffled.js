@@ -40,6 +40,9 @@ module.exports = function (options) {
 	var prodKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
 					 user:      { keep: options.keys.production,    remove: options.keys.development}}
 
+	var devKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
+					user:      { keep: options.keys.production,    remove: options.keys.development}}
+
 	gulp.task('default', ['webpack-dev-server']);
 
 	gulp.task('release-p', ['webpack-p'], function() {

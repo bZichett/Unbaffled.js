@@ -58,7 +58,7 @@ module.exports = function (options) {
 
 	return {
 		options: options,
-		productionWebpackConfig: getProductionWebpackConfig(),
-		developmentWebpackConfig: getDevelopmentWebpackConfig()
+		productionWebpackConfig: getProductionWebpackConfig(options),
+		developmentWebpackConfig: getDevelopmentWebpackConfig(options)
 	}
 };
