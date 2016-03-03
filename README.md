@@ -10,6 +10,7 @@ while programmatically generating a versions manifest file.
 	* development and automatic multiple frozen production versions
 		* optimized client side caching since only newly modified modules are created in new version build directory
 		* (See external repositories in django and JS for one implementation on how to use them)
+		* Keep x past versions, and delete older versions which have no dependencies to the current build.
 	* random name generator for new versions
 	* automatically increment version name based on patch/minor/major flags
 	* pull branch name
@@ -106,7 +107,17 @@ On the client side production version, the developer will
 need to either manually patch in the generated files into an HTML file or automate this process with a server side build script
 (I'm currently working on releasing an open source version of my django/python solution soon)
   
+### Manifest Options
+
+Adding keep: true to a version entry ensures this version won't be deleted
+
+### Gulpfile options
+
+### Webpack Links
+
+* https://webpack.github.io/docs/list-of-plugins.html
+
 ### TODO 
 
 * Add vendor module separation
-* Clean up comments
+* Clean up repository and comments

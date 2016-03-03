@@ -1,2 +1,2 @@
-import A1 from 'A1'
-import A2 from 'A2'
+import A1 from './A1'
+import A2 from './A2'

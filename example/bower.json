@@ -1,0 +1,19 @@
+{
+  "name": "example",
+  "version": "x.x.x",
+  "homepage": "https://github.com/bZichett/unbaffled.js",
+  "authors": [
+    "Ben Z. <bz@projectample.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "mithril": "~0.2.3"
+  }
+}

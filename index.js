@@ -1,12 +1,14 @@
 /** NODE */
 var path = require('path');
-var merge = require("webpack-merge")
+
+var merge = require('webpack-merge')
 
 /** SCAFFOLD */
 
 // These will be registered in the global namespace
 var tasks = [
 	require('./src/tasks/webpack'),
+	require('./src/tasks/utils'),
 ]
 
 module.exports = function (options) {
@@ -14,24 +16,31 @@ module.exports = function (options) {
 	options = options || {};
 
 	if (!options.modules) throw Error('Need to specify at least one module');
+	if (!options.webpackConfig) throw Error('Need to specify a webpackConfig');
 
-	options.versionsDir = options.versionsDir || '/dist';
+	var jsModules = options.modules.js
+	var jsKeys = Object.keys(jsModules)
+	var normalizedJsKeys = jsKeys.map(function(moduleName){
+		if(moduleName.indexOf('/') != -1){
+			return moduleName.split('/')[1] // TODO only will work for 1 level deep
+		} else return moduleName
+	})
 
 	var dir = options.dir
-	var es6Modules = options.modules.language.es6
 
-	var es6_list = Object.keys(es6Modules)
-
-	options = merge(options, {
+	merge(options, {
 		modules: {
+			namespaced: {
+				js: jsKeys
+			},
 			list: {
-				es6: es6_list
+				js: normalizedJsKeys
 			}
 		},
 		dir: {
 			modules: {
-				list: es6_list.map(function (name) {
-					return path.resolve(dir.languages.es6, name)
+				list: jsKeys.map(function (name) {
+					return path.resolve(dir.languages.js, name)
 				})
 			},
 			dist: path.join(dir.root, dir.dist),
@@ -39,13 +48,6 @@ module.exports = function (options) {
 			development: path.join(dir.root, dir.dist, dir.development)
 		}
 	})
-
-	var globs = {
-		tests: ['test/*-test.js'].concat(
-			Object.keys(es6Modules).map(function (moduleName) {
-				return es6Modules[moduleName][0]
-			}))
-	}
 
 	for (var i = 0; i < tasks.length; i++) {
 		tasks[i](options)

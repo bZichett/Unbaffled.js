@@ -1,6 +1,6 @@
 {
   "name": "unbaffled-js",
-  "version": "0.0.8",
+  "version": "0.0.11",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -27,8 +27,6 @@
     "babel-plugin-transform-react-jsx": "^6.6.0",
     "babel-plugin-transform-runtime": "^6.6.0",
     "babel-preset-es2015-webpack2": "^1.0.0",
-    "babel-preset-react": "^6.5.0",
-    "chai": "^3.5.0",
     "css-loader": "^0.23.1",
     "directory-copy": "^0.1.0",
     "extract-text-webpack-plugin": "^1.0.1",
@@ -48,14 +46,13 @@
     "resolve-url-loader": "^1.4.3",
     "rimraf": "^2.5.2",
     "sass-loader": "^3.1.2",
-    "should": "^8.2.2",
     "split-by-name-webpack-plugin": "0.0.3",
     "style-loader": "^0.13.0",
     "url-loader": "^0.5.7",
     "webpack": "^2.1.0-beta.3",
     "webpack-configurator": "^0.3.1",
     "webpack-dev-server": "^2.0.0-beta",
-    "webpack-merge": "^0.7.3",
+    "webpack-merge": "^0.8.3",
     "webpack-split-by-path": "0.0.8",
     "webpack-stream": "^3.1.0",
     "yargs": "^4.2.0"

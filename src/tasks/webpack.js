@@ -1,81 +1,96 @@
+
+/** Directory and files */
+var rimraf = require('rimraf')
 var path = require('path')
 var fs = require('fs')
-var gulp = require('gulp')
-var rimraf = require('rimraf')
 
-var webpack = require('webpack')
-var gutil = require("gulp-util")
-var gulpWebpack = require('webpack-stream')
-
-var WebpackDevServer = require("webpack-dev-server")
-var SplitByNamePlugin = require('split-by-name-webpack-plugin')
+/** Misc */
 var argv = require('yargs').argv;
 
-var uB_wConfig = require("../../webpack.config.js").webpackConfig
+/** Gulp */
+var gulp = require('gulp')
+var gulpWebpack = require('webpack-stream')
+var gutil = require("gulp-util")
 
+/** Webpack */
+var webpack = require('webpack')
+var WebpackDevServer = require("webpack-dev-server")
+
+/** Configurations */
+var uB_wConfig = require("../../webpack.config.js").webpackConfig
 var uB_prodKeys = require("../../webpack.config.js").production
 var uB_devKeys = require("../../webpack.config.js").development
 
-var stream = require('webpack-stream')
+/** Unbaffled */
 var makeConfig = require('../makeConfig')
-var merge = require('webpack-merge')
-
 var setupRelease = require('../setup').setupRelease
-var makeManifestPath = require('../utils').makeManifestPath
+
+
+function doneWithRelease(version){
+	if(version.noChanges){
+		gutil.log(gutil.colors.red("No changes; delete the directory"))
+	} else {
+		gutil.log(gutil.colors.magenta("Built " + version.name))
+		gutil.log(gutil.colors.magenta("Modules updated " + version.updatedModules))
+	}
+}
 
 module.exports = function (options) {
 
-	gulp.task('clean', function(){
-		var dir = options.dir
-		rimraf(dir.release, function(error){});
-		rimraf(dir.development, function(error){});
-		rimraf(makeManifestPath(dir.manifest.versions), function(error){});
-		rimraf(makeManifestPath(dir.manifest.development), function(error){});
+	var devKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
+					user:      { keep: options.keys.production,    remove: options.keys.development}}
+
+	var prodKeys = { unbaffled: { keep: uB_prodKeys,                 remove: uB_devKeys},
+					 user:      { keep: options.keys.production,    remove: options.keys.development}}
+
+	gulp.task('default', ['webpack-dev-server']);
+
+	gulp.task('release-p', ['webpack-p'], function() {
+		setupRelease(options, true).then(function(newVersion){
+			doneWithRelease(newVersion)
+		})
 	})
-
-	var wpConfigDevelopment = makeConfig(options, uB_wConfig, uB_devKeys, uB_prodKeys)
-	var wpConfigProduction = makeConfig(options, uB_wConfig, uB_prodKeys, uB_devKeys)
-
-	gulp.task('release', ['webpack-p'], function(callback) {
-		setupRelease(options, argv.production).then(function(newVersion){})
+	gulp.task('release-d', ['webpack-d'], function() {
+		setupRelease(options, false).then(function(newVersion){
+			doneWithRelease(newVersion)
+		})
 	})
 
 	gulp.task('webpack-p', function () {
-		return gulp.src(options.entry)
+
+		var wpConfigProduction = makeConfig(options, uB_wConfig, prodKeys)
+
+		console.log(wpConfigProduction)
+
+		// TODO Fix the key here to allow multiple entry points
+		return gulp.src(options.webpackConfig.entry['app'])
 			.pipe(gulpWebpack(wpConfigProduction, webpack))
 			.pipe(gulp.dest(path.resolve(options.dir.development)));
 	})
 
 	gulp.task('webpack-d', function () {
-		var newDevVersion = setupRelease(options, false)
-		return gulp.src(options.entry)
+
+		var wpConfigDevelopment = makeConfig(options, uB_wConfig, devKeys)
+
+		return gulp.src(options.webpackConfig.entry['app'])
 			.pipe(gulpWebpack(wpConfigDevelopment, webpack))
 			.pipe(gulp.dest(path.resolve(options.dir.development)));
 	})
 
-	//gulp.task('webpack', [], function () {
-	//	return gulp.src(options.dir.modules.list) // gulp looks for all source files under specified path
-	//		//.pipe(sourcemaps.init()) // creates a source map which would be very helpful for debugging by maintaining the actual source code structure
-	//		.pipe(stream(wpConfigDevelopment)) // blend in the webpack config into the source files
-	//		//.pipe(uglify())// minifies the code for better compression
-	//		//.pipe(sourcemaps.write())
-	//		.pipe(gulp.dest(options.dir.dist));
-	//});
-
-	gulp.task("webpack-dev-server", function (callback) {
+	gulp.task("webpack-dev-server", function () {
 
 		options.split = false;
 
-		var wConfig = makeConfig(options, uB_wConfig, uB_devKeys, uB_prodKeys)
+		var wConfig = makeConfig(options, uB_wConfig, devKeys)
 
-		console.log("wConfig", wConfig)
+		console.log("webpackConfig", wConfig)
+
 		wConfig.split = false; // No splitting if dev-server
 		wConfig.devtool = "eval";
 		wConfig.debug = true;
 
 		//wConfig.entry.unshift('webpack-dev-server/client?http://localhost:8080')
 
-		// Start a webpack-dev-server
 		new WebpackDevServer(webpack(wConfig), {
 			//publicPath: path.resolve(wConfig.output.publicPath),
 			contentBase: path.resolve(wConfig.output.path),
@@ -107,10 +122,4 @@ module.exports = function (options) {
 		});
 	});
 
-	gulp.task('default', ['webpack-dev-server']);
-	//gulp.task('default', ['webpack-dev-server', 'watch']);
-	//
-	//gulp.task('watch', function () {
-	//	gulp.watch(path.resolve(options.dir.src.es6), ['webpack']);
-	//});
 }

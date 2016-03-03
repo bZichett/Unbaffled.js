@@ -1,6 +1,7 @@
 var fs = require('fs')
 var path = require('path')
 
+
 module.exports.getProductionVersion = function (versions) {
 	return findByMatchingProperties(versions, {production: true})[0]
 }
@@ -13,8 +14,7 @@ module.exports.makeManifestPath = makeManifestPath
 
 
 module.exports.getManifest = function (manifestFilePath) {
-	var v = JSON.parse(fs.readFileSync(manifestFilePath, 'utf8'))
-	return v
+	return JSON.parse(fs.readFileSync(manifestFilePath, 'utf8'))
 }
 
 module.exports.setupDirs = function (dir) {
@@ -37,24 +37,12 @@ module.exports.setupDirs = function (dir) {
 	if (!fs.existsSync(dir.development + '/vendor')) fs.mkdirSync(dir.development + '/vendor')
 
 	/** Development manifest*/
-	var devVersion = false
 	if (!fs.existsSync(devManifestPath)) {
 		fs.writeFileSync(devManifestPath, JSON.stringify({}))
 	}
 
 	/** Version manifest */
-	var versions, versionNames
-	if (!fs.existsSync(versionManifestPath)) {
-		fs.writeFileSync(versionManifestPath, JSON.stringify([]))
-		versions = []
-		versionNames = []
-	}
-	else {
-		versions = JSON.parse(fs.readFileSync(versionManifestPath, 'utf8'))
-		versionNames = versions.map(function (version) {
-			return version.name
-		})
-	}
+	if (!fs.existsSync(versionManifestPath)) fs.writeFileSync(versionManifestPath, JSON.stringify([]))
 
 	return {versions: versionManifestPath, devVersion: devManifestPath}
 

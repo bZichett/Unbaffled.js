@@ -1,7 +1,6 @@
 /** GULP */
 var exec = require('gulp-exec')
 var gutil = require('gulp-util')
-var magenta = gutil.colors.magenta('123')
 
 /** DIRECTORY AND FILES */
 var rimraf = require('rimraf')
@@ -51,6 +50,9 @@ module.exports = {
 	    var versionManifestPath = paths.versions
 	    var devManifestPath = paths.devVersion
 
+	    // Keep track of what past versions this build is dependent on
+	    // so we can optionally purge older versions
+	    var versionDependencies = []
         var DEVELOPMENT = !PRODUCTION
 
         var modules = opts.modules
@@ -101,7 +103,7 @@ module.exports = {
             modules: {'js': {}, 'css': {}, 'vendor': {}}
         }
 
-	    function updateDevManifest(bundleName) {
+	    function updateDevManifest() {
 		    try {
 			    newVersion.name = 'dev-' + newVersion.name
 			     //devVersion.modules[bundleName][module] = 'development'
@@ -116,14 +118,13 @@ module.exports = {
 	    }
 
         if (PRODUCTION && versions.length > 0 && devVersion) {
-            gutil.log("Old versions exist", magenta)
+            gutil.log(gutil.colors.magenta("Old versions exist"))
 
             /** We need to compare the modified date of the last distribution module
                  with the modified date of the development module.
                 By doing this, we'll collect the names
                 of the most recently changed modules
              */
-
 	        //var developmentModulesJS = fs.readdirSync(dir.dist + 'development/js');
             //var developmentModulesCSS = fs.readdirSync(dir.dist + 'development/css');
             //var developmentModulesVendor = fs.readdirSync(dir.dist + 'development/vendor');
@@ -131,7 +132,7 @@ module.exports = {
             var moduleModifiedMapJS = {}
 	        var moduleModifiedMapCSS = {}
 
-            opts.modules.list.es6.forEach(function (module) {
+            opts.modules.list.js.forEach(function (module) {
 
                 try {
 	                moduleModifiedMapJS[module] = md5ify(dir.dist + '/development/' + 'js' + '/' + module + '.js')
@@ -163,6 +164,7 @@ module.exports = {
 	            var oldVersionAbsPath
 
                 var keys = Object.keys(devModulesHash)
+
                 for (var i = 0; i < keys.length; i++) {
 
                     var moduleName = keys[i]
@@ -178,7 +180,6 @@ module.exports = {
 	                    hash = md5ify(oldVersionAbsPath)
                     } catch (e) {
 	                    // A new file
-	                    // console.log("New file or hash failed")
 	                    hash = false
                     }
 
@@ -194,7 +195,7 @@ module.exports = {
 	                    // Copy from older versions
 	                     newVersionModules[moduleName] =
 		                    oldVersionModules[moduleName] != 'development' ? oldVersionModules[moduleName] : distributionName
-
+	                     versionDependencies.push(oldVersionModules[moduleName])
 	                     //copyFileSync(
 		                 //   oldVersionAbsPath,
 		                 //   path.resolve(dir.newVersionDir, bundleDir, moduleName + "." + fileType))
@@ -215,26 +216,23 @@ module.exports = {
             compareModuleRelease('js', 'js', moduleModifiedMapJS, oldVersion, newVersion)
             compareModuleRelease('css', 'css', moduleModifiedMapCSS, oldVersion, newVersion)
 
-            // If module is found, add to the dictionary
-            // If it's not found, then we must use the development version
 
         } else {
 			if(PRODUCTION){
 
 	            /** First production distribution */
-	            for (var i = 0; i < opts.modules.list.es6.length; i++) {
-		            var moduleName = opts.modules.list.es6[i]
-		            //console.log("MODULE", i, " : ", moduleName)
+	            opts.modules.list.js.forEach(function(moduleName){
+
 	                // Find last modified file.  If the development folder is more recently modified than
 	                // the last found module version, replace it with the new name.
-	                newVersion.modules.js[opts.modules.list.es6[i]] = distributionName
+	                newVersion.modules.js[moduleName] = distributionName
 
 		            try {
 			            if(fs.readFileSync(path.resolve(dir.development, 'css', moduleName + ".css")))
 				            newVersion.modules.css[moduleName] = distributionName
 		            } catch(e){}
 
-	            }
+	            })
 
 				cssModuleNames.forEach(function (module) {
 	                newVersion.modules.css[module] = distributionName
@@ -251,43 +249,55 @@ module.exports = {
 						console.log('Bulk copy from development complete')
 					})
 
-			} else {
-
-				/** Overwrite development manifest */
-				updateDevManifest(distributionName)
 			}
 
         }
 
-        // Now add the currently released version to the manifest
-        versions.unshift(newVersion)
-
-        // Now build new minified modules into the new distriubtion
-        //buildDistribution(newVersion)
-
-        // And remove any older entries if needed
-
-        //if(versions.length > 5){
-        //	var oldest = versions.pop()
-        //	fs.unlink(dir.dist + oldest.name, function(err, data){
-        //	})
-        //}
-
 		if(PRODUCTION){
-			//console.log(versions.length)
-			//console.log(updatedModules.length > 0)
+
+			// Now add the currently released version to the manifest
+			versions.unshift(newVersion)
+
 			if(versions.length == 1 || updatedModules.length > 0) {
+
+				// Remove any older entries while ensuring
+				// it has no dependencies to the current build
+				// and hasn't been marked to keep
+				if(opts.versionsToKeep && versions.length > opts.versionsToKeep){
+					var v = Object.create(versions)
+					var canDeleteVersion
+					while(v.length != 0) {
+						var nextOldest = v.pop()
+						if(!nextOldest.keep && versionDependencies.indexOf(nextOldest.name) == -1){
+							canDeleteVersion = nextOldest
+							break
+						}
+					}
+
+					versions.splice(versions.indexOf(canDeleteVersion), 1)
+					rimraf(path.join(dir.release, canDeleteVersion.id + "-" + canDeleteVersion.name), function(err){})
+				}
+
+				newVersion.updatedModules = updatedModules
+
 				fs.writeFile(versionManifestPath, JSON.stringify(versions), function (err, data) {
 					if (err) {
 						return console.error(err);
 					}
 				});
+
+
 			}
 			else {
 				// No changes, delete the directory
-				console.log("No changes, delete the directory")
+				newVersion.noChanges = true
 				rimraf(dir.newVersionDir, function(err){})
 			}
+
+
+		} else {
+			// TODO Write to dev manifest
+			updateDevManifest()
 		}
 
         return deferred.resolve(newVersion);

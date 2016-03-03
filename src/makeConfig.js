@@ -1,90 +1,71 @@
 var path = require('path')
-var merge = require('webpack-merge')
-
 var Config = require('webpack-configurator')
-
+var merge = require('webpack-merge')
+var webpack = require('webpack')
 var SplitByPathPlugin = require('webpack-split-by-path')
 
-module.exports = function(options, uB_wConfig, keepkeys, removeKeys) {
+module.exports = function(options, uB_wConfig, keyRegulator) {
+
+	var dir = options.dir
 
 	var config = new Config();
 
-	var uB_extend = uB_wConfig[keepkeys[0]]
-
+	var uB_extend = uB_wConfig[keyRegulator.unbaffled.keep[0]]
 	var user_wConfig = options.webpackConfig
-	var user_extend = user_wConfig[keepkeys[0]]
+	var user_extend = user_wConfig[keyRegulator.user.keep[0]]
 
+	var jsKeys = options.modules.namespaced.js
+
+	// 4 merges which create a final config based on production and development keys
+	// in the 2 supplied webpackConfigs (user generated and unbaffled)
 	config.merge(uB_wConfig)
 	config.merge(uB_extend)
 	config.merge(user_wConfig)
 	config.merge(user_extend)
 
-	var wpConfig = config.resolve()
+	// Moved to index.js due to a glitch : config.merge(overrideOptions)
 
-	delete wpConfig.PRODUCTION
-	delete wpConfig.DEVELOPMENT
-
-	//var wpConfig = merge.smart(uB_config, user_wConfig)
-
-	var dir = options.dir
-
-	wpConfig.output.path = path.resolve(wpConfig.output.path)
-	wpConfig.output.publicPath = path.resolve(wpConfig.output.publicPath)
-	//config.devServer.contentBase= path.resolve(config.devServer.contentBase)
+	config.merge({
+		provide: options.provide,
+		plugins: [
+			 new webpack.ProvidePlugin(
+				options.webpackConfig.externals
+			)
+		],
+		resolve: {
+			modules: jsKeys.map(function(moduleName){
+				return path.resolve(dir.root, dir.src.js, moduleName)
+			})
+		}
+	})
 
 	if (options.split) {
-		//console.log("Splitting bundle", path.join(dir.root, dir.src.es6, 'app/'))
-		wpConfig = merge(wpConfig, {
+		config.merge({
 			plugins: [
 				new SplitByPathPlugin(
-					options.modules.list.es6.map(function(module){
+					jsKeys.map(function(module){
 						return {
-							name: module,
-							path: path.join(dir.root, dir.src.es6, module + '/')
+							// Flatten the hierarchy (moduleA instead of module/moduleA)
+							name: path.parse(module).name,
+							path: path.join(dir.root, dir.src.js, module + '/')
 						}
 					})
 					, {
 						ignore: [
-							//'path/to/ingore/file/or/dir1',
-							//'path/to/ingore/file/or/dir2'
 						]
 					}
 				)
 			]
 		})
-
-		//console.log("PL", config.plugins)
 	}
 
-	// By name
+	var webpackConfig = config.resolve()
 
-	//if (options.split) {
-	//	console.log("Splitting bundle")
-	//	var plugins = [
-	//		new SplitByNamePlugin({
-	//			buckets: [
-	//				{
-	//					name: 'app',
-	//					regex: /app\//
-	//				},
-	//				{
-	//					name: 'moduleA',
-	//					regex: /moduleA\//
-	//				},
-	//				{
-	//					name: 'moduleB',
-	//					regex: /moduleB\//
-	//				},
-	//				{
-	//					name: 'lib',
-	//					regex: /lib\//
-	//				}
-	//			]
-	//		})
-	//	]
-	//	config = merge(config, plugins)
-	//}
+	webpackConfig.output.path = dir.root + '/' + webpackConfig.output.path
+	webpackConfig.output.publicPath = dir.root + '/' + webpackConfig.output.publicPath
 
+	delete webpackConfig[keyRegulator.unbaffled.keep[0]]
+	delete webpackConfig[keyRegulator.unbaffled.remove[0]]
 
-	return wpConfig
+	return webpackConfig
 }

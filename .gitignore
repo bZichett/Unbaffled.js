@@ -2,6 +2,7 @@ example/build/*
 !example/build/index.html
 
 example/manifest*
+example/bower_components/*
 .idea
 node_modules
 npm-debug.log
