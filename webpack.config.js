@@ -48,7 +48,7 @@ var config = {
 				loader: ExtractTextPlugin.extract([
 					"css",
 					"resolve-url" ,
-					"sass?sourceMap&indentedSyntax"
+					"ruby-sass?sourceMap&indentedSyntax"
 				])
 			},
 			{

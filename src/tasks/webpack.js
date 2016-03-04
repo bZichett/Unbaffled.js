@@ -110,9 +110,6 @@ module.exports = function (options) {
 			quiet: false,
 			noInfo: false,
 			//lazy: true,
-			proxy: {
-
-			},
 			filename: "bundle.js",
 			watchOptions: {
 				aggregateTimeout: 300,
@@ -121,7 +118,7 @@ module.exports = function (options) {
 			//headers: { "X-Custom-Header": "yes" }
 
 		})
-		webpackDevServerConfig.merge(options.webpackDevServer)
+		webpackDevServerConfig.merge(wConfig.devServer ? wConfig.devServer : {})
 
 		new WebpackDevServer(webpack(wConfig), webpackDevServerConfig.resolve())
 			.listen(8080, "localhost", function (err) {

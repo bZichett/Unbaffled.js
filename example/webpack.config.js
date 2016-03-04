@@ -19,7 +19,7 @@ module.exports.webpackConfig = {
             path.resolve(vendor_dir, 'mithril', 'mithril.min.js'),
         ]
     },
-
+    devServer: {},
     resolve: {
         alias: {
         },

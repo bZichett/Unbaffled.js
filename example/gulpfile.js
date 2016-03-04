@@ -13,7 +13,7 @@ var dir = {
 var options = {
 
     webpackConfig: webpackConfig,
-    webpackDevServer: {},
+
     keys: {
         production: ["PRODUCTION"],
         development: ["DEVELOPMENT"]
