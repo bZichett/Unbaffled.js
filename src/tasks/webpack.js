@@ -24,7 +24,7 @@ var uB_devKeys = require("../../webpack.config.js").development
 /** Unbaffled */
 var makeConfig = require('../makeConfig')
 var setupRelease = require('../setup').setupRelease
-
+var Config = require('webpack-configurator')
 
 function doneWithRelease(version){
 	if(version.noChanges){
@@ -90,8 +90,9 @@ module.exports = function (options) {
 		wConfig.debug = true;
 
 		//wConfig.entry.unshift('webpack-dev-server/client?http://localhost:8080')
+		var webpackDevServerConfig = new Config()
 
-		new WebpackDevServer(webpack(wConfig), {
+		webpackDevServerConfig.merge({
 			//publicPath: path.resolve(wConfig.output.publicPath),
 			contentBase: path.resolve(wConfig.output.path),
 			stats: {
@@ -109,6 +110,9 @@ module.exports = function (options) {
 			quiet: false,
 			noInfo: false,
 			//lazy: true,
+			proxy: {
+
+			},
 			filename: "bundle.js",
 			watchOptions: {
 				aggregateTimeout: 300,
@@ -116,9 +120,13 @@ module.exports = function (options) {
 			}
 			//headers: { "X-Custom-Header": "yes" }
 
-		}).listen(8080, "localhost", function (err) {
-			if (err) throw new gutil.PluginError("webpack-dev-server", err);
-			gutil.log("[webpack-dev-server]", "http://localhost:8080/webpack-dev-server/index.html");
+		})
+		webpackDevServerConfig.merge(options.webpackDevServer)
+
+		new WebpackDevServer(webpack(wConfig), webpackDevServerConfig.resolve())
+			.listen(8080, "localhost", function (err) {
+				if (err) throw new gutil.PluginError("webpack-dev-server", err);
+				gutil.log("[webpack-dev-server]", "http://localhost:8080/webpack-dev-server/index.html");
 		});
 	});
 
